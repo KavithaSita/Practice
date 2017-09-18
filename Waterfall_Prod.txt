@@ -1,0 +1,22 @@
+drop view if exists SITAK.Waterfall;
+
+create view SITAK.Waterfall as
+select
+ cast(year(auth.DATE_JOINED) as varchar) || ' - ' ||to_char(auth.date_joined,'Month')  as registration_yr_mth,
+ cast(ci.transyear as varchar) || ' - ' ||  to_char(clip_timestamp,'Month') as activation_yr_mth,
+ count(distinct ci.consumer_id_id) as number_activations
+from mdot_client.auth_user auth
+join mdot_master.retailer r on auth.clientid = r.retailer_id
+ join mdot_client.consumer_id cid on auth.clientid = cid.clientid
+                                    and auth.username = cid.value
+ join mdot_client.consumer_id cidloyalty on cid.clientid = cidloyalty.clientid
+                                    and cid.consumer_id = cidloyalty.consumer_id
+join mdot_client.consumer_incentive ci on cidloyalty.consumer_id_id = ci.consumer_id_id
+                                           and ci.clientid = auth.clientid
+where auth.clientid = 10
+and auth.username not in ('0', 'svcconsumer')
+and auth.DATE_JOINED <= ci.selection_date
+and  cast(DATE_JOINED as date) BETWEEN ADD_MONTHS(cast(CURRENT_TIMESTAMP as date) - (EXTRACT(DAY FROM cast(CURRENT_TIMESTAMP as date))-1), -12) 
+                                   AND cast(CURRENT_TIMESTAMP as date) - (EXTRACT(DAY FROM cast(CURRENT_TIMESTAMP as date))-1)
+group by 1,2
+order by 1,2;
